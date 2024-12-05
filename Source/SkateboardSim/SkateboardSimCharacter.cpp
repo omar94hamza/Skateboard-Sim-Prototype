@@ -86,6 +86,9 @@ void ASkateboardSimCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASkateboardSimCharacter::Look);
+
+		//Speeding Up
+		//EnhancedInputComponent->BindAction(SpeedUpAction, ETriggerEvent::Triggered, this, &ASkateboardSimCharacter::SpeedUpAction);
 	}
 	else
 	{
@@ -110,9 +113,14 @@ void ASkateboardSimCharacter::Move(const FInputActionValue& Value)
 		// get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
+		//lerp to give momentum
+		float MoveFValue = 10.0f;
+		float lerpValue = FMath::Lerp(MoveFValue, MovementVector.Y, 0.01f);
+
 		// add movement 
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
+		//AddMovementInput(ForwardDirection, lerpValue);
 	}
 }
 
