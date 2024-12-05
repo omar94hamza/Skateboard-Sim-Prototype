@@ -52,14 +52,39 @@ public:
 	ASkateboardSimCharacter();
 	
 
+private:
+	/* Speed Relative Variables */
+	float BaseSpeed;		//Normal Skating Speed
+	float MaxSpeed;			//Maximum Speed after push
+	float PushSpeed;		//Speed increment during a push
+	float CurrentSpeed;		//Current Speed of the character
+
+	/** Timer handle for resetting speed */
+	FTimerHandle SpeedResetTimerHandle;
+
+
+	/** Push animation state for AnimBP */
+	UPROPERTY(BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	bool bIsPushing;
+
 protected:
+
+	//FString Message = FString(TEXT("Speeding Up"));
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
-			
+
+	/** Speeding Up */
+	void StartSpeedingUp();
+	void ResetSpeedAfterPush();
+
+	/** Set pushing state for AnimBP */
+	void SetPushingState();
+
+
 
 protected:
 	// APawn interface

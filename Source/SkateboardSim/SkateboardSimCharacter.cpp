@@ -52,6 +52,14 @@ ASkateboardSimCharacter::ASkateboardSimCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+
+	//Speed System
+	BaseSpeed = GetCharacterMovement()->MaxWalkSpeed;	//Normal Skating Speed
+	MaxSpeed = BaseSpeed * 2;							//Maximum Speed after push
+	PushSpeed = BaseSpeed * 0.3;						//Speed increment during a push
+	CurrentSpeed = BaseSpeed;							//Current Speed of the character
+	bIsPushing = false;									// Initialize pushing state
+
 }
 
 void ASkateboardSimCharacter::BeginPlay()
@@ -88,7 +96,7 @@ void ASkateboardSimCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASkateboardSimCharacter::Look);
 
 		//Speeding Up
-		//EnhancedInputComponent->BindAction(SpeedUpAction, ETriggerEvent::Triggered, this, &ASkateboardSimCharacter::SpeedUpAction);
+		EnhancedInputComponent->BindAction(SpeedUpAction, ETriggerEvent::Triggered, this, &ASkateboardSimCharacter::StartSpeedingUp);
 	}
 	else
 	{
@@ -113,14 +121,9 @@ void ASkateboardSimCharacter::Move(const FInputActionValue& Value)
 		// get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
-		//lerp to give momentum
-		float MoveFValue = 10.0f;
-		float lerpValue = FMath::Lerp(MoveFValue, MovementVector.Y, 0.01f);
-
 		// add movement 
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
-		//AddMovementInput(ForwardDirection, lerpValue);
 	}
 }
 
@@ -135,4 +138,37 @@ void ASkateboardSimCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void ASkateboardSimCharacter::StartSpeedingUp()
+{
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 20.0f, FColor::Red, FString::Printf(TEXT("Inside Starts Speed")));
+	}
+
+	if (CurrentSpeed < MaxSpeed)
+	{
+		bIsPushing = true;
+		CurrentSpeed += PushSpeed;
+		CurrentSpeed = FMath::Clamp(CurrentSpeed, BaseSpeed, MaxSpeed);
+
+		GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
+
+		GetWorldTimerManager().SetTimer(SpeedResetTimerHandle, this, &ASkateboardSimCharacter::ResetSpeedAfterPush, 1.5f, false);
+
+		//bIsPushing = false;
+	}
+}
+
+void ASkateboardSimCharacter::ResetSpeedAfterPush()
+{
+	CurrentSpeed = BaseSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
+	bIsPushing = false;
+}
+
+void ASkateboardSimCharacter::SetPushingState()
+{
+	bIsPushing = true;
 }
