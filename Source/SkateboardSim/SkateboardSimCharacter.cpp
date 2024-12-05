@@ -59,7 +59,8 @@ ASkateboardSimCharacter::ASkateboardSimCharacter()
 	PushSpeed = BaseSpeed * 0.3;						//Speed increment during a push
 	CurrentSpeed = BaseSpeed;							//Current Speed of the character
 	bIsPushing = false;									// Initialize pushing state
-
+	
+	BrakeSpeed = BaseSpeed * 0.1;						//Brake Speed Decrementing
 }
 
 void ASkateboardSimCharacter::BeginPlay()
@@ -97,6 +98,9 @@ void ASkateboardSimCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 
 		//Speeding Up
 		EnhancedInputComponent->BindAction(SpeedUpAction, ETriggerEvent::Triggered, this, &ASkateboardSimCharacter::StartSpeedingUp);
+
+		//Braking
+		EnhancedInputComponent->BindAction(BrakeAction, ETriggerEvent::Triggered, this, &ASkateboardSimCharacter::StartBraking);
 	}
 	else
 	{
@@ -142,11 +146,6 @@ void ASkateboardSimCharacter::Look(const FInputActionValue& Value)
 
 void ASkateboardSimCharacter::StartSpeedingUp()
 {
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 20.0f, FColor::Red, FString::Printf(TEXT("Inside Starts Speed")));
-	}
-
 	if (CurrentSpeed < MaxSpeed)
 	{
 		bIsPushing = true;
@@ -171,4 +170,32 @@ void ASkateboardSimCharacter::ResetSpeedAfterPush()
 void ASkateboardSimCharacter::SetPushingState()
 {
 	bIsPushing = true;
+}
+
+void ASkateboardSimCharacter::StartBraking()
+{
+	GetWorldTimerManager().SetTimer(BrakeResetTimerHandle, this, &ASkateboardSimCharacter::ApplyBraking, 0.1f, true);
+}
+
+void ASkateboardSimCharacter::ApplyBraking()
+{
+	if (CurrentSpeed > 0)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 20.0f, FColor::Red, FString::Printf(TEXT("Inside Brake")));
+		}
+
+		CurrentSpeed -= BrakeSpeed;
+		CurrentSpeed = FMath::Clamp(CurrentSpeed, 0, BaseSpeed);
+
+		GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
+
+		if (CurrentSpeed <= 0)
+		{
+			GetWorldTimerManager().ClearTimer(BrakeResetTimerHandle);
+			GetCharacterMovement()->MaxWalkSpeed = BaseSpeed;
+			CurrentSpeed = BaseSpeed;
+		}
+	}
 }

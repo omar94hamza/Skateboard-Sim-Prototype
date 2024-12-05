@@ -48,6 +48,10 @@ class ASkateboardSimCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SpeedUpAction;
 
+	/** Brake Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* BrakeAction;
+
 public:
 	ASkateboardSimCharacter();
 	
@@ -58,9 +62,14 @@ private:
 	float MaxSpeed;			//Maximum Speed after push
 	float PushSpeed;		//Speed increment during a push
 	float CurrentSpeed;		//Current Speed of the character
+	
+	float BrakeSpeed;		//Speed Decrement per brake;
 
 	/** Timer handle for resetting speed */
 	FTimerHandle SpeedResetTimerHandle;
+
+	/** Timer handle for resetting brake */
+	FTimerHandle BrakeResetTimerHandle;
 
 
 	/** Push animation state for AnimBP */
@@ -84,6 +93,11 @@ protected:
 	/** Set pushing state for AnimBP */
 	void SetPushingState();
 
+	/** Call to Start Braking */
+	void StartBraking();
+
+	/** Gradually Apply Braking */
+	void ApplyBraking();
 
 
 protected:
