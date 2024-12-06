@@ -53,14 +53,15 @@ ASkateboardSimCharacter::ASkateboardSimCharacter()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 
-	//Speed System
-	BaseSpeed = GetCharacterMovement()->MaxWalkSpeed;	//Normal Skating Speed
-	MaxSpeed = BaseSpeed * 2;							//Maximum Speed after push
-	PushSpeed = BaseSpeed * 0.3;						//Speed increment during a push
+
+	/** Initialize Speed Values */
+	BaseSpeed = GetCharacterMovement()->MaxWalkSpeed;	//Default / Minimum Skating Speed = 500
+	MaxSpeed = BaseSpeed * 2.1;							//Maximum Speed after push
+	PushSpeed = BaseSpeed * 0.25;						//Speed increment during a push
 	CurrentSpeed = BaseSpeed;							//Current Speed of the character
+	BrakeRate = BaseSpeed * 0.125;						//Brake Speed Decrementing
 	bIsPushing = false;									// Initialize pushing state
-	
-	BrakeSpeed = BaseSpeed * 0.1;						//Brake Speed Decrementing
+	bIsBraking = false;									// Initialize braking state
 }
 
 void ASkateboardSimCharacter::BeginPlay()
@@ -76,6 +77,9 @@ void ASkateboardSimCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+
+	OmarLog("Begin Play");
+	OmarLog("Current Speed = " + FString::SanitizeFloat(CurrentSpeed));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -128,6 +132,18 @@ void ASkateboardSimCharacter::Move(const FInputActionValue& Value)
 		// add movement 
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
+
+		// Ensure proper speed update after stopping braking
+		if (CurrentSpeed == 0.0f)
+		{
+			CurrentSpeed = BaseSpeed;  // Reset to BaseSpeed after braking stops
+		}
+
+		//Adjust Speed
+		if (!bIsPushing && !bIsBraking)
+		{
+			UpdateSpeed(0.0f, BaseSpeed);
+		}
 	}
 }
 
@@ -146,24 +162,25 @@ void ASkateboardSimCharacter::Look(const FInputActionValue& Value)
 
 void ASkateboardSimCharacter::StartSpeedingUp()
 {
+
 	if (CurrentSpeed < MaxSpeed)
 	{
+		float TargetSpeed = FMath::Min(CurrentSpeed + PushSpeed, MaxSpeed);
+
+		// Smoothly interpolate CurrentSpeed towards TargetSpeed
+		float SpeedLerpAlpha = 0.25f;
+		CurrentSpeed = FMath::Lerp(CurrentSpeed, TargetSpeed, SpeedLerpAlpha);
+		UpdateSpeed(PushSpeed, CurrentSpeed + PushSpeed);
 		bIsPushing = true;
-		CurrentSpeed += PushSpeed;
-		CurrentSpeed = FMath::Clamp(CurrentSpeed, BaseSpeed, MaxSpeed);
-
-		GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
-
-		GetWorldTimerManager().SetTimer(SpeedResetTimerHandle, this, &ASkateboardSimCharacter::ResetSpeedAfterPush, 1.5f, false);
-
-		//bIsPushing = false;
+		OmarLog(FString::SanitizeFloat(CurrentSpeed));
 	}
+
+	GetWorldTimerManager().SetTimer(SpeedResetTimerHandle, this, &ASkateboardSimCharacter::ResetSpeedAfterPush, 1.5f, false);
 }
 
 void ASkateboardSimCharacter::ResetSpeedAfterPush()
 {
-	CurrentSpeed = BaseSpeed;
-	GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
+	UpdateSpeed(0, BaseSpeed);
 	bIsPushing = false;
 }
 
@@ -174,28 +191,44 @@ void ASkateboardSimCharacter::SetPushingState()
 
 void ASkateboardSimCharacter::StartBraking()
 {
-	GetWorldTimerManager().SetTimer(BrakeResetTimerHandle, this, &ASkateboardSimCharacter::ApplyBraking, 0.1f, true);
+	if (CurrentSpeed > 0)
+	{
+		bIsBraking = true;
+		GetWorldTimerManager().SetTimer(BrakeResetTimerHandle, this, &ASkateboardSimCharacter::ApplyBraking, 0.1f, true);
+	}
 }
 
 void ASkateboardSimCharacter::ApplyBraking()
 {
-	if (CurrentSpeed > 0)
+	if (bIsBraking)
 	{
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 20.0f, FColor::Red, FString::Printf(TEXT("Inside Brake")));
-		}
+		UpdateSpeed(-BrakeRate, CurrentSpeed-BrakeRate);
+	}
 
-		CurrentSpeed -= BrakeSpeed;
-		CurrentSpeed = FMath::Clamp(CurrentSpeed, 0, BaseSpeed);
+	// Clamp speed to zero to ensure we don't go below 0
+	if (CurrentSpeed <= 0.0f)
+	{
+		CurrentSpeed = 0.0f;
+		bIsBraking = false;
 
-		GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
+		// Clean up the timer once we stop braking
+		GetWorldTimerManager().ClearTimer(BrakeResetTimerHandle);
 
-		if (CurrentSpeed <= 0)
-		{
-			GetWorldTimerManager().ClearTimer(BrakeResetTimerHandle);
-			GetCharacterMovement()->MaxWalkSpeed = BaseSpeed;
-			CurrentSpeed = BaseSpeed;
-		}
+		OmarLog("Speed reached zero after braking.");
+	}
+}
+
+void ASkateboardSimCharacter::UpdateSpeed(float DeltaSpeed, float ourMaxSpeed)
+{
+	CurrentSpeed += DeltaSpeed;
+	CurrentSpeed = FMath::Clamp(CurrentSpeed, 0.0f, ourMaxSpeed);
+	GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
+}
+
+void ASkateboardSimCharacter::OmarLog(FString Message)
+{
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 20.0f, FColor::Red, FString::Printf(TEXT("%s"), *Message));
 	}
 }

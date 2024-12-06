@@ -44,7 +44,7 @@ class ASkateboardSimCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
-	/** Speeding Up Action */
+	/** Speeding Up Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SpeedUpAction;
 
@@ -58,28 +58,26 @@ public:
 
 private:
 	/* Speed Relative Variables */
-	float BaseSpeed;		//Normal Skating Speed
+	float BaseSpeed;		//Default Skating Speed (Max Speed with no Push)
 	float MaxSpeed;			//Maximum Speed after push
 	float PushSpeed;		//Speed increment during a push
 	float CurrentSpeed;		//Current Speed of the character
-	
-	float BrakeSpeed;		//Speed Decrement per brake;
+	float BrakeRate;		//Speed Decrement per brake;
 
-	/** Timer handle for resetting speed */
-	FTimerHandle SpeedResetTimerHandle;
-
-	/** Timer handle for resetting brake */
-	FTimerHandle BrakeResetTimerHandle;
+	/** Timer Handles */
+	FTimerHandle SpeedResetTimerHandle;		//Resetting Speed
+	FTimerHandle BrakeResetTimerHandle;		// Resetting Brakes
 
 
 	/** Push animation state for AnimBP */
 	UPROPERTY(BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
 	bool bIsPushing;
 
+	/** Brake animation state for AnimBP */
+	UPROPERTY(BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+	bool bIsBraking;
+
 protected:
-
-	//FString Message = FString(TEXT("Speeding Up"));
-
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
 
@@ -93,12 +91,17 @@ protected:
 	/** Set pushing state for AnimBP */
 	void SetPushingState();
 
-	/** Call to Start Braking */
-	void StartBraking();
 
-	/** Gradually Apply Braking */
-	void ApplyBraking();
+	/** Braking */
+	void StartBraking();	//Call to Start Braking
+	void ApplyBraking();	//Gradually Apply Braking
 
+
+	/** Helper Functions */
+	void UpdateSpeed(float DeltaSpeed, float ourMaxSpeed);
+
+	//Logging
+	void OmarLog(FString Message);
 
 protected:
 	// APawn interface
