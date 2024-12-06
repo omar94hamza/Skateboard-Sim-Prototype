@@ -44,7 +44,7 @@
 | UI and HUD Integration | 4 hours |
 | Level Design and Asset Integration | 3 hours |
 | Playtesting and Debugging | 2 hours |
-| Total Time Invested | 12 hours |
+| Total Time Invested | 22 hours |
 
 # Contact
 For any questions or feedback regarding this project, feel free to reach out via the provided email address
