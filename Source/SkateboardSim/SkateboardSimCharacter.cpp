@@ -10,6 +10,9 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include <Kismet/GameplayStatics.h>
+#include "ObstacleActor.h"
+#include "ObstacleCollisionManager.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -60,14 +63,24 @@ ASkateboardSimCharacter::ASkateboardSimCharacter()
 	PushSpeed = BaseSpeed * 0.25;						//Speed increment during a push
 	CurrentSpeed = BaseSpeed;							//Current Speed of the character
 	BrakeRate = BaseSpeed * 0.125;						//Brake Speed Decrementing
+	SpeedRecoveryRate = BaseSpeed * 0.5;				//Speed Recovery after Brake
+
 	bIsPushing = false;									// Initialize pushing state
 	bIsBraking = false;									// Initialize braking state
+
+	/** Scoring */
+	TotalScore = 0;										// Total score of the player
+	ObstacleHitPenalty = 5.0f;							// Penalty for hitting obstacles
+	ObstacleJumpReward = 10.0f;							// Reward for successfully jumping over obstacles
 }
 
 void ASkateboardSimCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
+
+	// Set the "Player" tag for identification
+	Tags.Add(FName("Player"));
 
 	//Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
@@ -78,8 +91,53 @@ void ASkateboardSimCharacter::BeginPlay()
 		}
 	}
 
+	TArray<AActor*> FoundManagers;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AObstacleCollisionManager::StaticClass(), FoundManagers);
+
+	if (FoundManagers.Num() > 0)
+	{
+		ObstacleCollisionManager = Cast<AObstacleCollisionManager>(FoundManagers[0]);
+		
+		// Find all ObstacleActor instances and assign the collision manager
+		TArray<AActor*> FoundObstacles;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), AObstacleActor::StaticClass(), FoundObstacles);
+
+		for (AActor* ObstacleActor : FoundObstacles)
+		{
+			AObstacleActor* Obstacle = Cast<AObstacleActor>(ObstacleActor);
+			if (Obstacle)
+			{
+				Obstacle->SetCollisionManager(ObstacleCollisionManager);
+			}
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No ObstacleCollisionManager found in the level."));
+	}
+
 	OmarLog("Begin Play");
 	OmarLog("Current Speed = " + FString::SanitizeFloat(CurrentSpeed));
+}
+
+void ASkateboardSimCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (bIsBraking && CurrentSpeed > 0)
+	{
+		// While braking, reduce speed smoothly
+		UpdateSpeed(-BrakeRate * DeltaTime, BaseSpeed);
+	}
+	else
+	{
+		// Smoothly recover speed back to BaseSpeed when button is released
+		if (CurrentSpeed <= BaseSpeed)
+		{
+			float RecoveryAmount = SpeedRecoveryRate * DeltaTime;
+			UpdateSpeed(RecoveryAmount, BaseSpeed);
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -91,8 +149,8 @@ void ASkateboardSimCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
 		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ASkateboardSimCharacter::StartJumping);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ASkateboardSimCharacter::EndJumping);
 
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ASkateboardSimCharacter::Move);
@@ -104,7 +162,8 @@ void ASkateboardSimCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 		EnhancedInputComponent->BindAction(SpeedUpAction, ETriggerEvent::Triggered, this, &ASkateboardSimCharacter::StartSpeedingUp);
 
 		//Braking
-		EnhancedInputComponent->BindAction(BrakeAction, ETriggerEvent::Triggered, this, &ASkateboardSimCharacter::StartBraking);
+		EnhancedInputComponent->BindAction(BrakeAction, ETriggerEvent::Started, this, &ASkateboardSimCharacter::StartBraking);
+		EnhancedInputComponent->BindAction(BrakeAction, ETriggerEvent::Completed, this, &ASkateboardSimCharacter::StopBraking);
 	}
 	else
 	{
@@ -170,7 +229,7 @@ void ASkateboardSimCharacter::StartSpeedingUp()
 		// Smoothly interpolate CurrentSpeed towards TargetSpeed
 		float SpeedLerpAlpha = 0.25f;
 		CurrentSpeed = FMath::Lerp(CurrentSpeed, TargetSpeed, SpeedLerpAlpha);
-		UpdateSpeed(PushSpeed, CurrentSpeed + PushSpeed);
+		UpdateSpeed(PushSpeed);
 		bIsPushing = true;
 		OmarLog(FString::SanitizeFloat(CurrentSpeed));
 	}
@@ -191,31 +250,18 @@ void ASkateboardSimCharacter::SetPushingState()
 
 void ASkateboardSimCharacter::StartBraking()
 {
-	if (CurrentSpeed > 0)
-	{
 		bIsBraking = true;
-		GetWorldTimerManager().SetTimer(BrakeResetTimerHandle, this, &ASkateboardSimCharacter::ApplyBraking, 0.1f, true);
-	}
 }
 
-void ASkateboardSimCharacter::ApplyBraking()
+void ASkateboardSimCharacter::StopBraking()
 {
-	if (bIsBraking)
-	{
-		UpdateSpeed(-BrakeRate, CurrentSpeed-BrakeRate);
-	}
+	bIsBraking = false;
+}
 
-	// Clamp speed to zero to ensure we don't go below 0
-	if (CurrentSpeed <= 0.0f)
-	{
-		CurrentSpeed = 0.0f;
-		bIsBraking = false;
 
-		// Clean up the timer once we stop braking
-		GetWorldTimerManager().ClearTimer(BrakeResetTimerHandle);
-
-		OmarLog("Speed reached zero after braking.");
-	}
+void ASkateboardSimCharacter::UpdateSpeed(float DeltaSpeed)
+{
+	UpdateSpeed(DeltaSpeed, CurrentSpeed + DeltaSpeed);
 }
 
 void ASkateboardSimCharacter::UpdateSpeed(float DeltaSpeed, float ourMaxSpeed)
@@ -224,6 +270,69 @@ void ASkateboardSimCharacter::UpdateSpeed(float DeltaSpeed, float ourMaxSpeed)
 	CurrentSpeed = FMath::Clamp(CurrentSpeed, 0.0f, ourMaxSpeed);
 	GetCharacterMovement()->MaxWalkSpeed = CurrentSpeed;
 }
+
+void ASkateboardSimCharacter::StartJumping()
+{
+	// Call base jump method
+	Super::Jump();
+
+	OmarLog("Jump initiated");
+
+	// Check if we successfully jump over an obstacle
+	CheckForObstaclesOnJump();
+}
+
+void ASkateboardSimCharacter::EndJumping()
+{
+	//Call base stop jump method
+	Super::StopJumping();
+
+	OmarLog("Jump ended");
+}
+
+void ASkateboardSimCharacter::CheckForObstaclesOnJump()
+{
+	TArray<AActor*> OverlappingActors;
+	GetCapsuleComponent()->GetOverlappingActors(OverlappingActors);
+
+	for (AActor* Actor : OverlappingActors)
+	{
+		if (Actor->ActorHasTag("Obstacle"))
+		{
+			TotalScore += ObstacleJumpReward;
+			OmarLog(FString::Printf(TEXT("Successfully jumped! New score: %d"), TotalScore));
+			UpdateHUDScore();
+			return;
+		}
+	}
+}
+
+// Subtract points for failing obstacles
+void ASkateboardSimCharacter::HandleObstacleCollision(AActor* Obstacle)
+{
+	TotalScore = FMath::Clamp(TotalScore - ObstacleHitPenalty, 0, TotalScore);
+
+	OmarLog(FString::Printf(TEXT("Failed obstacle jump! New score: %d"), TotalScore));
+	UpdateHUDScore();
+}
+
+// Update HUD logic
+void ASkateboardSimCharacter::UpdateHUDScore()
+{
+	if (APlayerController* PC = Cast<APlayerController>(Controller))
+	{
+		if (PC->IsLocalController())
+		{
+			PC->ClientMessage(FString::Printf(TEXT("Score: %d"), TotalScore));
+		}
+	}
+}
+
+
+
+
+
+
 
 void ASkateboardSimCharacter::OmarLog(FString Message)
 {

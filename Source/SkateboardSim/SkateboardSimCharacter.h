@@ -12,6 +12,7 @@ class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
+class AObstacleCollisionManager;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -58,15 +59,21 @@ public:
 
 private:
 	/* Speed Relative Variables */
-	float BaseSpeed;		//Default Skating Speed (Max Speed with no Push)
-	float MaxSpeed;			//Maximum Speed after push
-	float PushSpeed;		//Speed increment during a push
-	float CurrentSpeed;		//Current Speed of the character
-	float BrakeRate;		//Speed Decrement per brake;
+	float BaseSpeed;						//Default Skating Speed (Max Speed with no Push)
+	float MaxSpeed;							//Maximum Speed after push
+	float PushSpeed;						//Speed increment during a push
+	float CurrentSpeed;						//Current Speed of the character
+	float BrakeRate;						//Rate of Speed Decrement per brake;
+	float SpeedRecoveryRate;				//Rate of Speed Recovery after brake
 
 	/** Timer Handles */
 	FTimerHandle SpeedResetTimerHandle;		//Resetting Speed
 	FTimerHandle BrakeResetTimerHandle;		// Resetting Brakes
+
+	/** Scoring */
+	int32 TotalScore;						// Total score of the player
+	float ObstacleHitPenalty;				// Penalty for hitting obstacles
+	float ObstacleJumpReward;				// Reward for successfully jumping over obstacles
 
 
 	/** Push animation state for AnimBP */
@@ -93,12 +100,28 @@ protected:
 
 
 	/** Braking */
-	void StartBraking();	//Call to Start Braking
-	void ApplyBraking();	//Gradually Apply Braking
+	void StartBraking();					//Call to Start Braking
+	void StopBraking();						//Call to Stop Braking
 
+
+	void UpdateSpeed(float DelatSpeed);
 
 	/** Helper Functions */
 	void UpdateSpeed(float DeltaSpeed, float ourMaxSpeed);
+
+	void HandleObstacleCollision(AActor* Obstacle);
+
+	void StartJumping();
+
+	void EndJumping();
+
+	void CheckForObstaclesOnJump();
+
+	void UpdateHUDScore();
+
+
+	// Reference to the obstacle collision manager
+	AObstacleCollisionManager* ObstacleCollisionManager;
 
 	//Logging
 	void OmarLog(FString Message);
@@ -109,6 +132,8 @@ protected:
 	
 	// To add mapping context
 	virtual void BeginPlay();
+
+	void Tick(float DeltaTime);
 
 public:
 	/** Returns CameraBoom subobject **/
