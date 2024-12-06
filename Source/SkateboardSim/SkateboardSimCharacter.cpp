@@ -12,6 +12,7 @@
 #include "InputActionValue.h"
 #include <Kismet/GameplayStatics.h>
 #include "ObstacleActor.h"
+#include "Blueprint/UserWidget.h"
 #include "ObstacleCollisionManager.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -115,9 +116,6 @@ void ASkateboardSimCharacter::BeginPlay()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("No ObstacleCollisionManager found in the level."));
 	}
-
-	OmarLog("Begin Play");
-	OmarLog("Current Speed = " + FString::SanitizeFloat(CurrentSpeed));
 }
 
 void ASkateboardSimCharacter::Tick(float DeltaTime)
@@ -231,7 +229,6 @@ void ASkateboardSimCharacter::StartSpeedingUp()
 		CurrentSpeed = FMath::Lerp(CurrentSpeed, TargetSpeed, SpeedLerpAlpha);
 		UpdateSpeed(PushSpeed);
 		bIsPushing = true;
-		OmarLog(FString::SanitizeFloat(CurrentSpeed));
 	}
 
 	GetWorldTimerManager().SetTimer(SpeedResetTimerHandle, this, &ASkateboardSimCharacter::ResetSpeedAfterPush, 1.5f, false);
@@ -276,8 +273,6 @@ void ASkateboardSimCharacter::StartJumping()
 	// Call base jump method
 	Super::Jump();
 
-	OmarLog("Jump initiated");
-
 	// Check if we successfully jump over an obstacle
 	CheckForObstaclesOnJump();
 }
@@ -286,8 +281,6 @@ void ASkateboardSimCharacter::EndJumping()
 {
 	//Call base stop jump method
 	Super::StopJumping();
-
-	OmarLog("Jump ended");
 }
 
 void ASkateboardSimCharacter::CheckForObstaclesOnJump()
@@ -300,7 +293,6 @@ void ASkateboardSimCharacter::CheckForObstaclesOnJump()
 		if (Actor->ActorHasTag("Obstacle"))
 		{
 			TotalScore += ObstacleJumpReward;
-			OmarLog(FString::Printf(TEXT("Successfully jumped! New score: %d"), TotalScore));
 			UpdateHUDScore();
 			return;
 		}
@@ -311,8 +303,6 @@ void ASkateboardSimCharacter::CheckForObstaclesOnJump()
 void ASkateboardSimCharacter::HandleObstacleCollision(AActor* Obstacle)
 {
 	TotalScore = FMath::Clamp(TotalScore - ObstacleHitPenalty, 0, TotalScore);
-
-	OmarLog(FString::Printf(TEXT("Failed obstacle jump! New score: %d"), TotalScore));
 	UpdateHUDScore();
 }
 

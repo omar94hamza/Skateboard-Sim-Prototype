@@ -11,8 +11,6 @@ AObstacleActor::AObstacleActor()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
-	ActorHasTag(TEXT("Obstacle"));
-
 	// Create an empty root component to organize everything
 	USceneComponent* ObstacleRoot = CreateDefaultSubobject<USceneComponent>(TEXT("ObstacleRoot"));
 	RootComponent = ObstacleRoot;
@@ -51,47 +49,39 @@ void AObstacleActor::BeginPlay()
 	{
 		FailCollision->OnComponentBeginOverlap.AddDynamic(this, &AObstacleActor::OnFailCollisionOverlap);
 	}
+
+	bHasCollided = false;
+	bFailZoneTriggered = false;
 }
 
 void AObstacleActor::OnMainCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	OmarLog("OnMainCollisionOverlap");
 	if (OtherActor && OtherActor->ActorHasTag(TEXT("Player")))
 	{
-		OmarLog("Player Found");
-		if (CollisionManager)
+		FString MyBoolFailZone = bFailZoneTriggered ? "true" : "false";
+		FString MyBoolHasCollided = bHasCollided ? "true" : "false";
+		OmarLog("Fail Zone: " + MyBoolFailZone);
+		OmarLog("HasCollided: " + MyBoolHasCollided);
+		if (!bFailZoneTriggered && !bHasCollided)
 		{
-			OmarLog("Collision Manager Found");
-			if (bFailZoneTriggered)
-			{
-				OmarLog("Failed Trigger True");
-				// Player hit both Main and Fail zones (failure)
-				CollisionManager->SubtractScore(NegativeObstaclePointValue);
-				UE_LOG(LogTemp, Warning, TEXT("Player failed! Penalty applied."));
-			}
-			else
-			{
-				OmarLog("FailedTrigger False");
-				// Player cleared the obstacle successfully
-				CollisionManager->AddScore(PositiveObstaclePointValue);
-				UE_LOG(LogTemp, Warning, TEXT("Player succeeded! Points awarded."));
-			}
+			bHasCollided = true;
+			// Player cleared the obstacle successfully
+			OnSuccessfulJump();
 		}
 
-		// Reset the fail zone trigger for future collisions
-		bFailZoneTriggered = false;
+		bHasCollided = false;
 	}
+
+	// Start a timer to reset flags after a short delay
+	GetWorld()->GetTimerManager().SetTimer(ResetOverlapFlagsTimerHandle, this, &AObstacleActor::ResetOverlapFlags, 0.1f, false);
 }
 
 void AObstacleActor::OnFailCollisionOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	OmarLog("OnFailCollisionOverlap");
 	if (OtherActor && OtherActor->ActorHasTag(TEXT("Player")))
 	{
-		OmarLog("Player Found at Fail Zone and Trigger True");
-		// Player touched the fail zone
-		bFailZoneTriggered = true;
-		UE_LOG(LogTemp, Warning, TEXT("Fail zone triggered!"));
+		bFailZoneTriggered = true;  // Mark the fail zone as triggered
+		OnFailedJump();
 	}
 }
 
@@ -100,29 +90,6 @@ void AObstacleActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-}
-
-void AObstacleActor::NotifyActorBeginOverlap(AActor* OtherActor)
-{
-	if (OtherActor && OtherActor->ActorHasTag(TEXT("Player")))
-	{
-		if (CollisionManager)
-		{
-			FVector PlayerLocation = OtherActor->GetActorLocation();
-			FVector ObstacleLocation = GetActorLocation();
-
-			float DistanceAboveObstacle = PlayerLocation.Z - ObstacleLocation.Z;
-
-			if (DistanceAboveObstacle > 100.0f)
-			{
-				OnSuccessfulJump();
-			}
-			else
-			{
-				OnFailedJump();
-			}
-		}
-	}
 }
 
 void AObstacleActor::OnSuccessfulJump()
@@ -148,6 +115,14 @@ void AObstacleActor::SetCollisionManager(AObstacleCollisionManager* Manager)
 	CollisionManager = Manager;
 }
 
+void AObstacleActor::ResetOverlapFlags()
+{
+	bHasCollided = false;
+	bFailZoneTriggered = false;
+
+	UE_LOG(LogTemp, Warning, TEXT("Flags reset after overlap."));
+}
+
 
 
 
@@ -159,7 +134,7 @@ void AObstacleActor::OmarLog(FString Message)
 {
 	if (GEngine)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 20.0f, FColor::Red, FString::Printf(TEXT("%s"), *Message));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::Printf(TEXT("%s"), *Message));
 	}
 }
 

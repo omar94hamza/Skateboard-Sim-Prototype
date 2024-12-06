@@ -26,7 +26,11 @@ public:
 	void AddScore(int32 Points);
 	void SubtractScore(int32 Points);
 
+	UFUNCTION(BlueprintCallable, Category = "Score")
+	int32 GetCurrentScore() const { return TotalScore; }
 
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnScoreUpdated, int32, NewScore);
+	FOnScoreUpdated OnScoreUpdated;
 
 
 

@@ -37,6 +37,8 @@ protected:
 		bool bFromSweep,
 		const FHitResult& SweepResult);
 
+	void OnMainCollisionEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
 	UFUNCTION()
 	void OnFailCollisionOverlap(
 		UPrimitiveComponent* OverlappedComponent,
@@ -48,11 +50,14 @@ protected:
 
 	// Tracks if fail collision was triggered
 	bool bFailZoneTriggered;
+	bool bHasCollided;
 
 
 	UPROPERTY(EditAnywhere, Category = "Gameplay")
 	int32 PositiveObstaclePointValue = 10;
 	int32 NegativeObstaclePointValue = 5;
+
+	FTimerHandle ResetOverlapFlagsTimerHandle;
 
 	class AObstacleCollisionManager* CollisionManager;
 
@@ -60,14 +65,12 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
-
 	void OnSuccessfulJump();
 	void OnFailedJump();
 
 	void SetCollisionManager(class AObstacleCollisionManager* Manager);
 
-
+	void ResetOverlapFlags();
 
 
 
