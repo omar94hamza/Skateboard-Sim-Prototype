@@ -12,7 +12,6 @@
 #include "InputActionValue.h"
 #include <Kismet/GameplayStatics.h>
 #include "ObstacleActor.h"
-#include "Blueprint/UserWidget.h"
 #include "ObstacleCollisionManager.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -315,19 +314,5 @@ void ASkateboardSimCharacter::UpdateHUDScore()
 		{
 			PC->ClientMessage(FString::Printf(TEXT("Score: %d"), TotalScore));
 		}
-	}
-}
-
-
-
-
-
-
-
-void ASkateboardSimCharacter::OmarLog(FString Message)
-{
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 20.0f, FColor::Red, FString::Printf(TEXT("%s"), *Message));
 	}
 }

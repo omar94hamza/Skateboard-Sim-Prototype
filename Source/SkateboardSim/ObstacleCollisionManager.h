@@ -32,11 +32,6 @@ public:
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnScoreUpdated, int32, NewScore);
 	FOnScoreUpdated OnScoreUpdated;
 
-
-
-	//Logging
-	void OmarLog(FString Message);
-
 private:
 	int32 TotalScore;
 

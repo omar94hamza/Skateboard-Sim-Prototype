@@ -23,8 +23,6 @@ void AObstacleCollisionManager::BeginPlay()
 void AObstacleCollisionManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	OmarLog(FString::SanitizeFloat(TotalScore));
 }
 
 void AObstacleCollisionManager::AddScore(int32 Points)
@@ -39,21 +37,6 @@ void AObstacleCollisionManager::SubtractScore(int32 Points)
 	{
 		TotalScore -= Points;
 		OnScoreUpdated.Broadcast(TotalScore);
-	}
-}
-
-
-
-
-
-
-
-
-void AObstacleCollisionManager::OmarLog(FString Message)
-{
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, FString::Printf(TEXT("%s"), *Message));
 	}
 }
 

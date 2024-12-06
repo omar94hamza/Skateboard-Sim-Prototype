@@ -71,13 +71,4 @@ public:
 	void SetCollisionManager(class AObstacleCollisionManager* Manager);
 
 	void ResetOverlapFlags();
-
-
-
-
-
-
-
-	//Logging
-	void OmarLog(FString Message);
 };

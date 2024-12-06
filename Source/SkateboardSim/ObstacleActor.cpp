@@ -58,10 +58,6 @@ void AObstacleActor::OnMainCollisionOverlap(UPrimitiveComponent* OverlappedCompo
 {
 	if (OtherActor && OtherActor->ActorHasTag(TEXT("Player")))
 	{
-		FString MyBoolFailZone = bFailZoneTriggered ? "true" : "false";
-		FString MyBoolHasCollided = bHasCollided ? "true" : "false";
-		OmarLog("Fail Zone: " + MyBoolFailZone);
-		OmarLog("HasCollided: " + MyBoolHasCollided);
 		if (!bFailZoneTriggered && !bHasCollided)
 		{
 			bHasCollided = true;
@@ -97,7 +93,6 @@ void AObstacleActor::OnSuccessfulJump()
 	if (CollisionManager)
 	{
 		CollisionManager->AddScore(PositiveObstaclePointValue);
-		OmarLog("Successful Jump");
 	}
 }
 
@@ -106,7 +101,6 @@ void AObstacleActor::OnFailedJump()
 	if (CollisionManager)
 	{
 		CollisionManager->SubtractScore(NegativeObstaclePointValue);
-		OmarLog("Failed Jump");
 	}
 }
 
@@ -121,20 +115,5 @@ void AObstacleActor::ResetOverlapFlags()
 	bFailZoneTriggered = false;
 
 	UE_LOG(LogTemp, Warning, TEXT("Flags reset after overlap."));
-}
-
-
-
-
-
-
-
-
-void AObstacleActor::OmarLog(FString Message)
-{
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, FString::Printf(TEXT("%s"), *Message));
-	}
 }
 

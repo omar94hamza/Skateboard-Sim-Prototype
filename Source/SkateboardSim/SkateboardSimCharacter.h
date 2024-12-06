@@ -123,9 +123,6 @@ protected:
 	// Reference to the obstacle collision manager
 	AObstacleCollisionManager* ObstacleCollisionManager;
 
-	//Logging
-	void OmarLog(FString Message);
-
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
