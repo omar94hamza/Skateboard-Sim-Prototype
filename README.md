@@ -26,12 +26,26 @@
  - Assets used include Mixamo animations and simple meshes for the skate park environment.
  - GitHub was utilized for version control with incremental commits.
 
+# Development Notes
+ - Programming Language: Entirely developed in C++ without using Blueprints, except for HUD integration and animations.
+ - Assets Used:
+    - Character Model and Animations: Provided by Mixamo.
+    - Environment: Simple assets from the City Park Environment Collection.
+ - Version Control:
+ - GitHub was utilized with incremental commits to showcase development progress.
+
 # Documented Hours
 
 | Task  | Hours Spent |
 | ------------- | ------------- |
 | Initial Setup  |  1 hour  |
-|   |   |
+| Movement, Jumping, and Speed Controls  |  8 hours  |
+| Obstacle System and Points Logic | 5 hours |
+| UI and HUD Integration | 4 hours |
+| Level Design and Asset Integration | 3 hours |
+| Playtesting and Debugging | 2 hours |
+| Total Time Invested | 22 hours |
 
 # Contact
 For any questions or feedback regarding this project, feel free to reach out via the provided email address
+omar94hamza@yahoo.com
